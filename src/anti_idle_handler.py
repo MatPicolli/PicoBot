@@ -19,7 +19,6 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 class AntiIdleHandler:
     def __init__(self):
         self.config = Config()
-        self.config.load()
         self.running = False
         self.thread = None
         self.action_timers = {
@@ -29,6 +28,10 @@ class AntiIdleHandler:
             'magia': 0
         }
         self.default_seconds = 15  # Valor padrão de 15 segundos
+
+    def update_config(self, new_config):
+        self.config = new_config
+        self.action_timers = {action: 0 for action in self.action_timers}
 
     def start(self):
         if not self.thread or not self.thread.is_alive():
