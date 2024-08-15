@@ -1,13 +1,16 @@
 # interface.py
 import FreeSimpleGUI as sg
 from anti_idle_handler import AntiIdleHandler
+from rune_making_handler import RuneMakingHandler
 from config import Config
-import os
+from time import sleep
+import threading
 
 class Interface:
     def __init__(self):
         self.config = Config()
-        self.anti_idle_handler = None  # Inicialize como None
+        self.anti_idle_handler = None
+        self.rune_making_handler = None
         sg.theme('DarkBlue3')
         self.BUTTON_COLOR = ('white', '#1E3F66')
         self.INPUT_COLOR = ('#000000', '#FFFFFF')
@@ -19,7 +22,7 @@ class Interface:
              sg.Button('Rune Making', key='-RUNEMAKING-', size=(15, 3), button_color=self.BUTTON_COLOR, font=('Helvetica', 12))]
         ]
 
-        window = sg.Window('Anti-Idle Control', layout, element_justification='center')
+        window = sg.Window('PicoBot Control', layout, element_justification='center')
 
         while True:
             event, values = window.read()
@@ -31,8 +34,59 @@ class Interface:
                 self.anti_idle()
                 break
             elif event == '-RUNEMAKING-':
-                print('rune making')
+                window.close()
+                self.rune_making()
                 break
+
+        window.close()
+
+    def rune_making(self):
+        self.rune_making_handler = RuneMakingHandler()
+
+        layout = [
+            [sg.Text('Rune Making Control', font=('Helvetica', 16), justification='center', size=(30, 1))],
+            [sg.Text('Status:', size=(10, 1)), sg.Text('Stopped', size=(20, 1), key='-STATUS-')],
+            [sg.Button('START', key='-STARTPAUSE-', size=(15, 2), button_color=('white', '#4CAF50'), font=('Helvetica', 12, 'bold'))],
+            [sg.Button('Back to Main Menu', key='-BACK-', size=(15, 2), button_color=self.BUTTON_COLOR, font=('Helvetica', 12))]
+        ]
+
+        window = sg.Window('Rune Making Control', layout, element_justification='center')
+
+        rune_making_thread = None
+        running = False
+
+        while True:
+            event, values = window.read(timeout=100)
+
+            if event == sg.WINDOW_CLOSED or event == '-BACK-':
+                if running:
+                    self.rune_making_handler.stop()
+                    if rune_making_thread:
+                        rune_making_thread.join()
+                window.close()
+                self.selecionar_modo()
+                break
+
+            if event == '-STARTPAUSE-':
+                if not running:
+                    window['-STARTPAUSE-'].update('3', button_color=('white', '#4CAF50'))
+                    sleep(1)
+                    window['-STARTPAUSE-'].update('2', button_color=('white', '#4CAF50'))
+                    sleep(1)
+                    window['-STARTPAUSE-'].update('1', button_color=('white', '#4CAF50'))
+                    sleep(1)
+                    running = True
+                    window['-STARTPAUSE-'].update('PAUSE', button_color=('white', '#F44336'))
+                    window['-STATUS-'].update('Running')
+                    rune_making_thread = threading.Thread(target=self.rune_making_handler.run)
+                    rune_making_thread.start()
+                else:
+                    running = False
+                    self.rune_making_handler.stop()
+                    if rune_making_thread:
+                        rune_making_thread.join()
+                    window['-STARTPAUSE-'].update('START', button_color=('white', '#4CAF50'))
+                    window['-STATUS-'].update('Stopped')
 
         window.close()
 
